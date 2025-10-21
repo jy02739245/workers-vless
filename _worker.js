@@ -82,9 +82,14 @@ export default {
             handleMessage(earlyDataU8.buffer, state);
         }
 
+        const respHeaders = new Headers();
+        const proto = req.headers.get('sec-websocket-protocol');
+        if (proto) respHeaders.set('sec-websocket-protocol', proto);
+
         return new Response(null, {
             status: 101,
-            webSocket: client
+            webSocket: client,
+            headers: respHeaders
         });
     }
 };
@@ -184,38 +189,84 @@ async function establishConnection(addr, port, state) {
 }
 
 async function pipeRemoteToWS(conn, header, ws) {
-    // This is the most compatible version that works with VLESS.
-    // It's more performant than a WritableStream but may still hit CPU limits on high-bandwidth streams like 4K video.
-    let firstChunk = true;
+    // Optimized streaming with micro-batching to reduce frame overhead and CPU usage on large flows (e.g., YouTube 4K)
     const reader = conn.readable.getReader();
+    let firstChunk = true;
+
+    // Micro-batching configuration
+    const FLUSH_BYTES = 64 * 1024; // flush when accumulated >= 64KB
+    const FLUSH_INTERVAL = 2; // or after ~2ms without new data
+
+    let pending = [];
+    let pendingSize = 0;
+    let flushTimer = null;
+
+    const flush = () => {
+        if (flushTimer) {
+            clearTimeout(flushTimer);
+            flushTimer = null;
+        }
+        if (pendingSize === 0 || ws.readyState !== 1) {
+            pending = [];
+            pendingSize = 0;
+            return;
+        }
+        if (pending.length === 1) {
+            ws.send(pending[0]);
+        } else {
+            const out = new Uint8Array(pendingSize);
+            let off = 0;
+            for (const chunk of pending) {
+                out.set(chunk, off);
+                off += chunk.length;
+            }
+            ws.send(out);
+        }
+        pending = [];
+        pendingSize = 0;
+    };
+
     try {
         while (true) {
-            const {
-                done,
-                value
-            } = await reader.read();
-            if (done) {
-                break;
-            }
-            if (ws.readyState !== 1) {
-                break;
-            }
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (ws.readyState !== 1) break;
+
+            let chunk = value;
             if (firstChunk) {
-                const out = new Uint8Array(header.length + value.length);
+                const out = new Uint8Array(header.length + chunk.length);
                 out.set(header, 0);
-                out.set(value, header.length);
-                ws.send(out);
+                out.set(chunk, header.length);
+                chunk = out;
                 firstChunk = false;
-            } else {
-                ws.send(value);
+            }
+
+            // Large chunks: send directly (but flush any small pending first)
+            if (chunk.length >= FLUSH_BYTES) {
+                if (pendingSize) flush();
+                ws.send(chunk);
+                continue;
+            }
+
+            // Small/medium chunks: accumulate
+            pending.push(chunk);
+            pendingSize += chunk.length;
+
+            if (!flushTimer) {
+                flushTimer = setTimeout(flush, FLUSH_INTERVAL);
+            }
+            if (pendingSize >= FLUSH_BYTES) {
+                flush();
             }
         }
     } catch (e) {
-        // Connection closed, etc.
+        // ignore
     } finally {
-        reader.releaseLock();
+        try { reader.releaseLock(); } catch {}
+        // Ensure any buffered data is flushed before closing
+        try { flush(); } catch {}
         if (ws.readyState === 1) {
-            ws.close();
+            try { ws.close(); } catch {}
         }
     }
 }
