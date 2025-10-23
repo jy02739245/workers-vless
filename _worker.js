@@ -10,7 +10,7 @@ const KEEPALIVE = 15000, STALL_TIMEOUT = 8000, MAX_STALL = 12, MAX_RECONNECT = 2
 //////////////////////////////////////////////////////////////////////////主要架构////////////////////////////////////////////////////////////////////////
 export default {
     async fetch(request) {
-		if (request.headers.get('Upgrade') !== 'websocket') return new Response('Hello World!', { status: 200 });
+        if (request.headers.get('Upgrade') !== 'websocket') return new Response('Hello World!', { status: 200 });
         const url = new URL(request.url);
         我的SOCKS5账号 = url.searchParams.get('s5');
         if(我的SOCKS5账号){
@@ -74,12 +74,12 @@ function handleConnection(ws) {
                     lastData = Date.now();
                     stallCount = reconnectCount = 0;
                     if (ws.readyState === 1) {
-                        await ws.send(value);
-                        while (dataBuffer.length && ws.readyState === 1) {
-                            await ws.send(dataBuffer.shift());
+                        try {
+                            await ws.send(value);
+                        } catch (e) {
+                            dataBuffer.length = 0;
+                            break;
                         }
-                    } else {
-                        dataBuffer.push(value);
                     }
                 }
                 if (done) {
@@ -88,7 +88,7 @@ function handleConnection(ws) {
                 }
             }
         } catch (err) {
-            if (err.message.includes('reset') || err.message.includes('broken')) {
+            if (err.message.includes('reset') || err.message.includes('broken') || err.message.includes('closed')) {
                 await reconnect();
             } else {
                 cleanup(); ws.close(1006, 'Connection abnormal');
@@ -97,37 +97,56 @@ function handleConnection(ws) {
     }
     async function reconnect() {
         if (!info || ws.readyState !== 1 || reconnectCount >= MAX_RECONNECT) {
-            cleanup(); ws.close(1011, 'Reconnection failed'); return;
+            cleanup(); 
+            if (ws.readyState === 1) {
+                ws.close(1000, 'Connection closed');
+            }
+            return;
         }
         reconnectCount++;
         try {
             cleanupSocket();
-            await new Promise(resolve => setTimeout(resolve, 30 * Math.pow(2, reconnectCount) + Math.random() * 5));
-            const sock = connect({ hostname: info.host, port: info.port });
+            const backoffDelay = Math.min(30 * Math.pow(2, reconnectCount) + Math.random() * 100, 5000);
+            await new Promise(resolve => setTimeout(resolve, backoffDelay));
+            
+            if (ws.readyState !== 1) {
+                return;
+            }
+            
+            const sock = 启用SOCKS5全局反代 
+                ? await socks5Connect(info.host, info.port)
+                : connect({ hostname: info.host, port: info.port });
             await sock.opened;
             socket = sock;
             writer = sock.writable.getWriter();
             reader = sock.readable.getReader();
             lastData = Date.now(); stallCount = 0;
-            while (dataBuffer.length && ws.readyState === 1) { await writer.write(dataBuffer.shift()); }
             readLoop();
         } catch (err) {
-            setTimeout(reconnect, 1000);
+            if (ws.readyState === 1 && reconnectCount < MAX_RECONNECT) {
+                setTimeout(reconnect, 1000);
+            } else {
+                cleanup();
+            }
         }
     }
     function startTimers() {
         timers.keepalive = setInterval(async () => {
-            if (Date.now() - lastData > KEEPALIVE) {
+            if (Date.now() - lastData > KEEPALIVE && writer && socket) {
                 try {
-                    await writer.write(new Uint8Array(0)); lastData = Date.now();
+                    await writer.write(new Uint8Array(0)); 
+                    lastData = Date.now();
                 } catch (e) {
+                    clearInterval(timers.keepalive);
                 }
             }
         }, KEEPALIVE / 3);
         timers.health = setInterval(() => {
-            if (bytesReceived && Date.now() - lastData > STALL_TIMEOUT) {
+            if (bytesReceived && Date.now() - lastData > STALL_TIMEOUT && ws.readyState === 1) {
                 stallCount++;
-                if (stallCount >= MAX_STALL) reconnect();
+                if (stallCount >= MAX_STALL) {
+                    reconnect();
+                }
             }
         }, STALL_TIMEOUT / 2);
     }
@@ -152,14 +171,18 @@ function handleConnection(ws) {
             } else {
                 lastData = Date.now();
                 if (socket && writer) {
-                    await writer.write(evt.data);
+                    const data = evt.data instanceof ArrayBuffer ? new Uint8Array(evt.data) : evt.data;
+                    await writer.write(data);
                 } else {
-                    dataBuffer.push(evt.data);
+                    const data = evt.data instanceof ArrayBuffer ? new Uint8Array(evt.data) : evt.data;
+                    dataBuffer.push(data);
                 }
             }
         } catch (err) {
             cleanup();
-            ws.close(1006, 'Connection abnormal');
+            if (ws.readyState === 1) {
+                ws.close(1006, 'Connection abnormal');
+            }
         }
     });
     ws.addEventListener('close', cleanup);
