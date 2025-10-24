@@ -35,6 +35,21 @@ export default {
 function buildUUID(arr, start) {
     return Array.from(arr.slice(start, start + 16)).map(n => n.toString(16).padStart(2, '0')).join('').replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
 }
+function isLinkLocalAddress(host) {
+    const ipv4Pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const ipv4Match = host.match(ipv4Pattern);
+    if (ipv4Match) {
+        const octets = ipv4Match.slice(1, 5).map(Number);
+        if (octets[0] === 169 && octets[1] === 254) {
+            return true;
+        }
+    }
+    const ipv6Pattern = /^\[?fe80:/i;
+    if (ipv6Pattern.test(host)) {
+        return true;
+    }
+    return false;
+}
 function handleConnection(ws) {
     let socket, writer, reader, info;
     let isFirstMsg = true, bytesReceived = 0, stallCount = 0, reconnectCount = 0;
@@ -45,6 +60,7 @@ function handleConnection(ws) {
         if (FIXED_UUID && buildUUID(bytes, 1) !== FIXED_UUID) throw new Error('Auth failed');
         const { host, port, payload } = extractAddress(bytes);
         if (host.includes(atob('c3BlZWQuY2xvdWRmbGFyZS5jb20='))) throw new Error('Access');
+        if (isLinkLocalAddress(host)) throw new Error('Link-local address not allowed');
         let sock;
         if (启用SOCKS5全局反代) {
             sock = await socks5Connect(host, port);
