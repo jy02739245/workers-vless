@@ -1,6 +1,6 @@
 # Workers-Vless
 
-根据mingyu的snippets版本结合大佬的控流用AI改的，限速24M
+根据mingyu的snippets版本结合天书大佬的控流用AI改的，限速24M
 
 * 群聊: [HeroCore](https://t.me/HeroCore)
 * 频道: [HeroMsg](https://t.me/HeroMsg)
