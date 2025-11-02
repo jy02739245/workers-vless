@@ -6,6 +6,6 @@
 * 频道: [HeroMsg](https://t.me/HeroMsg)
 
 
-  * `/?s=admin:123456@123.123.28.123:13333`（仅SOCKS5）
-  * `/?gs=admin:123456@123.123.28.123:13333`（全局SOCKS5）
-  * `/?p=ProxyIP.US.CMLiussss.net`（仅Proxyip）
+  * `/s=admin:123456@123.123.28.123:13333`（仅SOCKS5）
+  * `/gs=admin:123456@123.123.28.123:13333`（全局SOCKS5）
+  * `/p=ProxyIP.US.CMLiussss.net`（仅Proxyip）
