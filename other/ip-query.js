@@ -1,6 +1,20 @@
 export default {
   async fetch(request) {
-    const cf = request.cf || {};
+
+		const url = new URL(request.url);
+		switch (url.pathname) {
+			case "/":
+				return getIP(request);
+
+			default:
+				return new Response("Not Found", { status: 404 });
+		}
+
+  },
+};
+
+function getIP(request) {
+	const cf = request.cf || {};
     const {
       country = "Unknown",
       region = "Unknown",
@@ -209,5 +223,5 @@ loadIPAPI();
         "cache-control": "no-store",
       },
     });
-  },
-};
+
+}
