@@ -1,48 +1,42 @@
 export default {
   async fetch(request) {
-
-		const url = new URL(request.url);
-		switch (url.pathname) {
-			case "/":
-				return getIP(request);
-
-			default:
-				return new Response("Not Found", { status: 404 });
-		}
-
+    const url = new URL(request.url);
+    switch (url.pathname) {
+      case "/":
+        return getIP(request);
+      default:
+        return new Response("Not Found", { status: 404 });
+    }
   },
 };
 
 function getIP(request) {
-	const cf = request.cf || {};
-    const {
-      country = "Unknown",
-      region = "Unknown",
-      city = "Unknown",
-      asOrganization = "Unknown ISP",
-      colo,
-    } = cf;
+  const cf = request.cf || {};
+  const {
+    country = "Unknown",
+    asOrganization = "Unknown ISP",
+  } = cf;
 
-    const ip =
-      request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-forwarded-for") ||
-      "Unknown";
+  const ip =
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-forwarded-for") ||
+    "Unknown";
 
-    const getFlag = (countryCode) => {
-      if (!countryCode || countryCode.length !== 2) return "🏳️";
-      const codePoints = countryCode
-        .toUpperCase()
-        .split("")
-        .map((c) => 127397 + c.charCodeAt());
-      return String.fromCodePoint(...codePoints);
-    };
+  const getFlag = (countryCode) => {
+    if (!countryCode || countryCode.length !== 2) return "🏳️";
+    const codePoints = countryCode
+      .toUpperCase()
+      .split("")
+      .map((c) => 127397 + c.charCodeAt());
+    return String.fromCodePoint(...codePoints);
+  };
 
-    const html = `
+  const html = `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>IP 信息显示</title>
 <style>
 body {
@@ -55,10 +49,7 @@ body {
   flex-direction: column;
   align-items: center;
 }
-h2 {
-  margin-bottom: 24px;
-  color: #111827;
-}
+h2 { margin-bottom: 24px; color: #111827; }
 .table-container {
   width: 100%;
   max-width: 1000px;
@@ -66,32 +57,34 @@ h2 {
   overflow: hidden;
   box-shadow: 0 8px 30px rgba(0,0,0,0.1);
 }
-table {
-  width: 100%;
-  border-collapse: collapse;
+table { width: 100%; border-collapse: collapse; }
+thead { background: #e5e7eb; }
+th, td { padding: 16px; text-align: left; vertical-align: middle; }
+th { font-weight: 600; font-size: 1em; }
+td { background: #ffffff; border-bottom: 1px solid #d1d5db; font-size: 0.95em; }
+tr:hover td { background: #f3f4f6; transition: 0.3s; }
+
+.source-cell {
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
-thead {
-  background: #e5e7eb;
+.site-icon {
+  width:24px;
+  height:24px;
+  border-radius:4px;
+  object-fit:cover;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
-th, td {
-  padding: 16px;
-  text-align: left;
+.site-label {
+  font-weight:500;
+  color:#0f172a;
+  text-decoration: none;
 }
-th {
-  font-weight: 600;
-  font-size: 1em;
-}
-td {
-  background: #ffffff;
-  border-bottom: 1px solid #d1d5db;
-  font-size: 0.95em;
-}
-td .flag {
-  margin-right: 8px;
-}
-tr:hover td {
-  background: #f3f4f6;
-  transition: 0.3s;
+.domain-sub {
+  display:block;
+  font-size:0.85em;
+  color:#6b7280;
 }
 .footer {
   margin-top: 40px;
@@ -115,31 +108,78 @@ tr:hover td {
   </thead>
   <tbody id="ip-table">
     <tr>
-      <td>🌏 Cloudflare</td>
+      <td class="source-cell">
+        <img class="site-icon" src="https://www.cloudflare.com/favicon.ico" alt="Cloudflare">
+        <div>
+          <a class="site-label" href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">Cloudflare</a>
+          <span class="domain-sub">cloudflare.com</span>
+        </div>
+      </td>
       <td>${ip}</td>
       <td>${asOrganization}</td>
       <td><span class="flag">${getFlag(country)}</span>${country}</td>
     </tr>
+
     <tr id="chatgpt-row">
-      <td>🌏 ChatGPT</td>
+      <td class="source-cell">
+        <img class="site-icon" src="https://chatgpt.com/favicon.ico" alt="ChatGPT">
+        <div>
+          <a class="site-label" href="https://chatgpt.com" target="_blank" rel="noopener noreferrer">ChatGPT</a>
+          <span class="domain-sub">chatgpt.com</span>
+        </div>
+      </td>
       <td id="chatgpt-ip">加载中...</td>
       <td id="chatgpt-isp">-</td>
       <td id="chatgpt-country"><span class="flag">🏳️</span>加载中...</td>
     </tr>
+
+    <tr id="openai-row">
+      <td class="source-cell">
+        <img class="site-icon" src="https://openai.com/favicon.ico" alt="OpenAI">
+        <div>
+          <a class="site-label" href="https://openai.com" target="_blank" rel="noopener noreferrer">OpenAI</a>
+          <span class="domain-sub">openai.com</span>
+        </div>
+      </td>
+      <td id="openai-ip">加载中...</td>
+      <td id="openai-isp">-</td>
+      <td id="openai-country"><span class="flag">🏳️</span>加载中...</td>
+    </tr>
+
     <tr id="ipv4-row">
-      <td>🌏 ip.sb IPv4</td>
+      <td class="source-cell">
+        <img class="site-icon" src="https://ip.sb/favicon.ico" alt="ip.sb">
+        <div>
+          <a class="site-label" href="https://ip.sb" target="_blank" rel="noopener noreferrer">ip.sb IPv4</a>
+          <span class="domain-sub">api-ipv4.ip.sb</span>
+        </div>
+      </td>
       <td id="ipv4-ip">加载中...</td>
       <td id="ipv4-isp">加载中...</td>
       <td id="ipv4-country"><span class="flag">🏳️</span>加载中...</td>
     </tr>
+
     <tr id="ipv6-row">
-      <td>🌏 ip.sb IPv6</td>
+      <td class="source-cell">
+        <img class="site-icon" src="https://ip.sb/favicon.ico" alt="ip.sb">
+        <div>
+          <a class="site-label" href="https://ip.sb" target="_blank" rel="noopener noreferrer">ip.sb IPv6</a>
+          <span class="domain-sub">api-ipv6.ip.sb</span>
+        </div>
+      </td>
       <td id="ipv6-ip">加载中...</td>
       <td id="ipv6-isp">加载中...</td>
       <td id="ipv6-country"><span class="flag">🏳️</span>加载中...</td>
     </tr>
+
     <tr id="ipapi-row">
-      <td>🌏 ipapi.is</td>
+      <td class="source-cell">
+        <img class="site-icon" src="https://ipapi.is/img/favicon/favicon-32x32.png" alt="ipapi.is">
+        <div>
+          <a class="site-label" href="https://ipapi.is" target="_blank" rel="noopener noreferrer">ipapi.is</a>
+          <span class="domain-sub">ipapi.is</span>
+        </div>
+      </td>
       <td id="ipapi-ip">加载中...</td>
       <td id="ipapi-isp">加载中...</td>
       <td id="ipapi-country"><span class="flag">🏳️</span>加载中...</td>
@@ -157,58 +197,75 @@ function getFlag(countryCode) {
   return String.fromCodePoint(...codePoints);
 }
 
-async function addRow(id, source, ip, isp, countryCode, countryName) {
+function addRow(id, ip, isp, countryCode, countryName) {
   document.getElementById(id + '-ip').textContent = ip || '-';
   document.getElementById(id + '-isp').textContent = isp || '-';
-  document.getElementById(id + '-country').innerHTML = '<span class="flag">' + getFlag(countryCode) + '</span>' + (countryName || countryCode || '-');
+  document.getElementById(id + '-country').innerHTML =
+    '<span class="flag">' + getFlag(countryCode) + '</span>' + (countryName || countryCode || '-');
 }
 
+// ChatGPT
 async function loadChatGPT() {
   try {
     const res = await fetch('https://chatgpt.com/cdn-cgi/trace');
     const text = await res.text();
-    const ipMatch = text.match(/ip=([^\\n]+)/);
-    const ip = ipMatch ? ipMatch[1] : '-';
-    const locMatch = text.match(/loc=([^\\n]+)/);
-    const country = locMatch ? locMatch[1] : '-';
-    addRow('chatgpt', 'ChatGPT', ip, '', country, country);
-  } catch(e){
-    console.error('ChatGPT加载失败', e);
-    addRow('chatgpt', 'ChatGPT', '加载失败', '-', '-','-');
+    const ip = text.match(/ip=([^\\n]+)/)?.[1] || '-';
+    const country = text.match(/loc=([^\\n]+)/)?.[1] || '-';
+    addRow('chatgpt', ip, '', country, country);
+  } catch {
+    addRow('chatgpt', '加载失败', '-', '-', '-');
   }
 }
 
+// OpenAI
+async function loadOpenAI() {
+  try {
+    const res = await fetch('https://openai.com/cdn-cgi/trace');
+    const text = await res.text();
+    const ip = text.match(/ip=([^\\n]+)/)?.[1] || '-';
+    const country = text.match(/loc=([^\\n]+)/)?.[1] || '-';
+    addRow('openai', ip, '', country, country);
+  } catch {
+    addRow('openai', '加载失败', '-', '-', '-');
+  }
+}
+
+// IPv4
 async function loadIPSBv4() {
   try {
     const res = await fetch('https://api-ipv4.ip.sb/geoip');
     const data = await res.json();
-    addRow('ipv4', 'ip.sb IPv4', data.ip, data.isp, data.country_code, data.country);
-  } catch(e){console.error('ip.sb IPv4加载失败', e);}
+    addRow('ipv4', data.ip, data.isp, data.country_code, data.country);
+  } catch {
+    addRow('ipv4', '加载失败', '-', '-', '-');
+  }
 }
 
+// IPv6
 async function loadIPSBv6() {
   try {
     const res = await fetch('https://api-ipv6.ip.sb/geoip');
     const data = await res.json();
-    addRow('ipv6', 'ip.sb IPv6', data.ip, data.isp, data.country_code, data.country);
-  } catch(e){console.error('ip.sb IPv6加载失败', e);}
+    addRow('ipv6', data.ip, data.isp, data.country_code, data.country);
+  } catch {
+    addRow('ipv6', '加载失败', '-', '-', '-');
+  }
 }
 
-// ipapi
+// IPAPI
 async function loadIPAPI() {
   try {
     const res = await fetch('https://api.ipapi.is');
     const data = await res.json();
     const country = data.location?.country || '-';
-    addRow('ipapi', 'ipapi', data.ip, data.asn?.org, data.location?.country_code, country);
-  } catch(e){console.error('ipapi加载失败', e);}
+    addRow('ipapi', data.ip, data.asn?.org, data.location?.country_code, country);
+  } catch {
+    addRow('ipapi', '加载失败', '-', '-', '-');
+  }
 }
 
-
-
-
-// 异步加载所有数据
 loadChatGPT();
+loadOpenAI();
 loadIPSBv4();
 loadIPSBv6();
 loadIPAPI();
@@ -217,11 +274,7 @@ loadIPAPI();
 </html>
 `;
 
-    return new Response(html, {
-      headers: {
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": "no-store",
-      },
-    });
-
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
 }
