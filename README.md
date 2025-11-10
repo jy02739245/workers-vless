@@ -1,4 +1,4 @@
-# Workers-Vless
+# Workers-snippets
 
 根据mingyu的snippets版本结合天书大佬的控流用AI改的，控流从6m开始提升，无上限
 
