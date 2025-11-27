@@ -11,3 +11,8 @@
   * `/p=ProxyIP.US.CMLiussss.net`（仅Proxyip）
   * `/h=192.168.1.1:1080`（回退http）
   * `/gh=192.168.1.1:1080`（全局http）
+ 
+> 可以使用  other/ip-query-gemini.js  的代码部署到Cloudflare workers来查询IP
+
+> 不想部署的话，可以使用我搭建的  https://ip.661388.xyz   ,点击IP可查看详细信息。
+<img width="2654" height="1326" alt="image" src="https://github.com/user-attachments/assets/dfc67843-e3c7-4b72-b2cc-8dc443ede7f0" />
