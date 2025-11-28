@@ -1,6 +1,6 @@
 # Workers-snippets
 
-根据mingyu的snippets版本结合天书大佬的控流用AI改的，控流从6m开始提升，无上限
+根据mingyu的snippets版本结合天书大佬的控流用AI改的，控流从6m开始提升，无上限，自测浏览器单线程下载10G的大文件可以下载完毕
 
 * 群聊: [HeroCore](https://t.me/HeroCore)
 * 频道: [HeroMsg](https://t.me/HeroMsg)
