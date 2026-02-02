@@ -1,11 +1,41 @@
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    
+
+    // 处理 API 中转请求
+    if (url.pathname === '/api/ipapi') {
+      const ip = url.searchParams.get('q');
+      const apiUrl = `https://api.ipapi.is${ip ? `?q=${ip}` : ''}`;
+      
+      try {
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        
+        const data = await response.json();
+        return new Response(JSON.stringify(data), {
+          headers: {
+            'content-type': 'application/json;charset=UTF-8',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json;charset=UTF-8',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
+    }
+
     // 获取 Cloudflare 识别的访问者信息
     const cf = request.cf || {};
-    const clientIp = request.headers.get("cf-connecting-ip") || 
-                     request.headers.get("x-forwarded-for") || 
+    const clientIp = request.headers.get("cf-connecting-ip") ||
+                     request.headers.get("x-forwarded-for") ||
                      "未知";
     const country = cf.country || "XX";
     const city = cf.city || "Unknown City";
@@ -35,20 +65,13 @@ function renderHtml(initData) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IP 哨兵 - 网络身份分析</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- React & Babel -->
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
-      }
-    }
-    </script>
+    <script src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <script>
@@ -95,14 +118,25 @@ function renderHtml(initData) {
     <div id="root"></div>
 
     <!-- 应用程序逻辑 -->
-    <script type="text/babel" data-type="module" data-presets="typescript,react">
-      import React, { useState, useEffect, useCallback } from 'react';
-      import { createRoot } from 'react-dom/client';
-      import { 
-        ShieldCheck, Github, Globe, Search, RefreshCcw, ExternalLink, 
-        X, Shield, Server, Activity, MapPin, AlertTriangle, CheckCircle2,
-        Info 
-      } from 'lucide-react';
+    <script type="text/babel" data-presets="react">
+      const { useState, useEffect, useCallback } = React;
+      const { createRoot } = ReactDOM;
+      
+      // 简化图标实现，避免依赖 lucide-react
+      const ShieldCheck = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>;
+      const Github = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>;
+      const Globe = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>;
+      const Search = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>;
+      const RefreshCcw = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v6h6"></path><path d="M21 12A9 9 0 0 0 6 5.3L3 8"></path><path d="M21 22v-6h-6"></path><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"></path></svg>;
+      const ExternalLink = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>;
+      const X = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
+      const Shield = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>;
+      const Server = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" x2="6" y1="6" y2="6"></line><line x1="6" x2="6" y1="18" y2="18"></line></svg>;
+      const Activity = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>;
+      const MapPin = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
+      const AlertTriangle = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>;
+      const CheckCircle2 = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+      const Info = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>;
 
       // --- 图标 Data URIs (内嵌 SVG) ---
       const ICONS = {
@@ -152,7 +186,7 @@ function renderHtml(initData) {
 
         // 每个风险项增加 15%
         const riskCount = riskFlags.filter(flag => flag === true).length;
-        const riskAddition = riskCount * 0.15; 
+        const riskAddition = riskCount * 0.15;
 
         const finalScore = baseScore + riskAddition;
 
@@ -306,13 +340,13 @@ function renderHtml(initData) {
                           <span className="text-lg font-mono font-bold text-slate-900 break-all text-right">{data.ip}</span>
                       </div>
                       <InfoItem label="区域注册机构" value={data.rir || '未知'} highlight />
-                      <InfoItem 
-                        label="运营商 / ASN 类型" 
+                      <InfoItem
+                        label="运营商 / ASN 类型"
                         value={
                             <span>
                                 <IpTypeBadge type={data.company?.type} /> / <IpTypeBadge type={data.asn?.type} />
                             </span>
-                        } 
+                        }
                       />
                       <div className="flex flex-col sm:flex-row justify-between py-2 items-center">
                           <span className="text-slate-500 text-sm font-medium flex items-center gap-1">
@@ -514,12 +548,12 @@ function renderHtml(initData) {
                       </div>
                       <div className="text-xs text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-4 left-1/2 transform -translate-x-1/2 whitespace-nowrap">点击查看详情</div>
                   </div>
-                  
+
                   <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-600">
                       <span className="text-xl">{getFlagEmoji(countryCode)}</span>
                       <span className="font-medium">{countryName || '未知位置'}</span>
                   </div>
-                  
+
                   {isp && isp !== '-' && (
                       <div className="mt-2 text-xs text-slate-400 font-medium px-2 py-1 bg-slate-50 rounded-lg inline-block max-w-full truncate">
                           {isp}
@@ -586,24 +620,24 @@ function renderHtml(initData) {
             return { ip: data.ip, isp: data.isp, countryCode: data.country_code, countryName: data.country, error: undefined };
           } catch (e) { return { error: '加载失败' }; }
         },
-        // IPAPI.is 基础信息查询
+        // IPAPI.is 基础信息查询 (使用备用 API 端点)
         fetchIpApi: async () => {
           try {
-            const res = await fetchWithTimeout('https://api.ipapi.is');
+            const res = await fetchWithTimeout('https://api.ipapi.cmliussss.net/');
             if (!res.ok) throw new Error('Error');
             const data = await res.json();
-            return { 
-                ip: data.ip, 
-                isp: data.asn?.org, 
-                countryCode: data.location?.country_code, 
-                countryName: data.location?.country, 
-                error: undefined 
+            return {
+                ip: data.ip,
+                isp: data.asn?.org,
+                countryCode: data.location?.country_code,
+                countryName: data.location?.country,
+                error: undefined
             };
           } catch (e) { return { error: '加载失败' }; }
         },
-        // 详情查询
+        // 详情查询 (使用 Worker 中转)
         fetchIpDetails: async (ip) => {
-          const res = await fetchWithTimeout(\`https://api.ipapi.is/?q=\${ip}\`);
+          const res = await fetchWithTimeout(\`/api/ipapi?q=\${ip}\`);
           if (!res.ok) throw new Error('详情查询失败');
           return await res.json();
         }
@@ -659,7 +693,7 @@ function renderHtml(initData) {
             ip: '加载中...', isp: '-', countryCode: '', countryName: '...', isLoading: true,
           }
         ]);
-        
+
         const [modalOpen, setModalOpen] = useState(false);
         const [selectedIp, setSelectedIp] = useState(null);
         const [detailData, setDetailData] = useState(null);
