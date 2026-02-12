@@ -620,20 +620,28 @@ function renderHtml(initData) {
             return { ip: data.ip, isp: data.isp, countryCode: data.country_code, countryName: data.country, error: undefined };
           } catch (e) { return { error: '加载失败' }; }
         },
-        // IPAPI.is 基础信息查询 (使用备用 API 端点)
+        // IPAPI.is 基础信息查询 (优先使用官方 API，失败后回退备用端点)
         fetchIpApi: async () => {
+          const parseIpApiResponse = (data) => ({
+            ip: data.ip,
+            isp: data.asn?.org,
+            countryCode: data.location?.country_code,
+            countryName: data.location?.country,
+            error: undefined
+          });
           try {
-            const res = await fetchWithTimeout('https://api.ipapi.cmliussss.net/');
+            const res = await fetchWithTimeout('https://api.ipapi.is/', {}, 5000);
             if (!res.ok) throw new Error('Error');
             const data = await res.json();
-            return {
-                ip: data.ip,
-                isp: data.asn?.org,
-                countryCode: data.location?.country_code,
-                countryName: data.location?.country,
-                error: undefined
-            };
-          } catch (e) { return { error: '加载失败' }; }
+            return parseIpApiResponse(data);
+          } catch (e) {
+            try {
+              const res = await fetchWithTimeout('https://api.ipapi.cmliussss.net/');
+              if (!res.ok) throw new Error('Error');
+              const data = await res.json();
+              return parseIpApiResponse(data);
+            } catch (e2) { return { error: '加载失败' }; }
+          }
         },
         // 详情查询 (使用 Worker 中转)
         fetchIpDetails: async (ip) => {
