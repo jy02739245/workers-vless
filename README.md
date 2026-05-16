@@ -1,7 +1,9 @@
 # Workers-snippets
 
 根据mingyu的snippets版本结合天书大佬的控流用AI改的，控流从6m开始提升，无上限，自测浏览器单线程下载10G的大文件可以下载完毕
+
 snippets_nohttp.js为去掉http的版本，path不支持/h和/gh参数
+
 grainTCP_worker.js为worker部署版本，使用AK大佬的GrainTCP方式，我自己测试下载单文件可以2.5G-5G之间，没有snippets的可以部署这个.path支持/p,/s,/g三种方式
 
 * 群聊: [HeroCore](https://t.me/HeroCore)
