@@ -4,6 +4,8 @@
 
 snippets_nohttp.js为去掉http的版本，path不支持/h和/gh参数
 
+snippets_nos5.js为snippets部署的版本，path只支持/p参数，也就是支持proxyip的用法，不支持socks5和http
+
 grainTCP_worker.js为worker部署版本，使用AK大佬的GrainTCP方式，我自己测试下载单文件可以2.5G-5G之间，没有snippets的可以部署这个.path支持/p,/s,/g三种方式
 
 * 群聊: [HeroCore](https://t.me/HeroCore)
